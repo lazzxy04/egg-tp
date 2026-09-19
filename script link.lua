@@ -1,12 +1,5 @@
 if _G.EggStop then _G.EggStop() end
 
--- Localize crucial Roblox globals at the absolute top so Matcha never loses them
-local CF_new = CFrame.new
-local V3_new = Vector3.new
-local V2_new = Vector2.new
-local UD2_new = UDim2.new
-local C3_rgb = Color3.fromRGB
-
 local WS = game:GetService("Workspace")
 local RS = game:GetService("RunService")
 local LP = game:GetService("Players").LocalPlayer
@@ -25,19 +18,19 @@ local wpMarker = nil
 local isTweening = false
 
 -- Clean Glassy Colors
-local GLASS_BG = C3_rgb(10, 10, 15)
+local GLASS_BG = Color3.fromRGB(10, 10, 15)
 local GLASS_ALPHA = 0.45 
-local RIM_COLOR = C3_rgb(255, 255, 255)
+local RIM_COLOR = Color3.fromRGB(255, 255, 255)
 local RIM_ALPHA = 0.15 
-local HEAD_OVERLAY = C3_rgb(255, 255, 255)
+local HEAD_OVERLAY = Color3.fromRGB(255, 255, 255)
 local HEAD_ALPHA = 0.03 
-local BTN_COLOR = C3_rgb(255, 255, 255)
+local BTN_COLOR = Color3.fromRGB(255, 255, 255)
 local BTN_ALPHA = 0.1 
 local BTN_HOVER_ALPHA = 0.25 
 
-local GOLD = C3_rgb(255, 215, 0)
-local GREEN = C3_rgb(50, 255, 100)
-local RED = C3_rgb(255, 100, 100)
+local GOLD = Color3.fromRGB(255, 215, 0)
+local GREEN = Color3.fromRGB(50, 255, 100)
+local RED = Color3.fromRGB(255, 100, 100)
 
 local function now() return (os.time and os.time()) or 0 end
 
@@ -81,25 +74,19 @@ end
 
 local function alert(t)
     if st.snd then
-        for _, f in ipairs({
-            function() playsound(SND) end,
-            function() PlaySound(SND) end,
-            function()
-                local s = Instance.new("Sound")
-                s.SoundId = SND
-                s.Volume = 2
-                s.Parent = WS
-                s:Play()
-            end,
-        }) do
-            if pcall(f) then break end
-        end
+        pcall(function()
+            local s = Instance.new("Sound")
+            s.SoundId = SND
+            s.Volume = 2
+            s.Parent = WS
+            s:Play()
+        end)
     end
     pcall(function() notify("100B+ Egg Spawned!", t.name .. " | " .. fmt(t.luck), 5) end)
 end
 
 -- ====================================================
--- BULLETPROOF EGG TELEPORT 
+-- BULLETPROOF EGG TELEPORT (Direct Global CFrame)
 -- ====================================================
 local function tp(t)
     local char = LP.Character
@@ -112,15 +99,17 @@ local function tp(t)
     end
     
     sel = t.model
-    local targetCFrame = CF_new(pos.X, pos.Y + 5, pos.Z)
+    local targetCFrame = CFrame.new(pos.X, pos.Y + 5, pos.Z)
     
-    local success = pcall(function() char:PivotTo(targetCFrame) end)
+    local success = pcall(function() 
+        char:PivotTo(targetCFrame) 
+    end)
     
     if not success then
         local hrp = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
         if hrp and hrp:IsA("BasePart") then
             if not pcall(function() hrp.CFrame = targetCFrame end) then
-                pcall(function() hrp.Position = V3_new(pos.X, pos.Y + 5, pos.Z) end)
+                pcall(function() hrp.Position = Vector3.new(pos.X, pos.Y + 5, pos.Z) end)
             end
         end
     end
@@ -142,7 +131,7 @@ local function setWaypoint()
             wpMarker = Instance.new("Part")
             wpMarker.Name = "R6_WaypointMarker"
             wpMarker.Shape = Enum.PartType.Ball
-            wpMarker.Size = V3_new(3, 3, 3)
+            wpMarker.Size = Vector3.new(3, 3, 3)
             wpMarker.Color = GREEN
             wpMarker.Material = Enum.Material.Neon
             wpMarker.Anchored = true
@@ -150,10 +139,10 @@ local function setWaypoint()
             wpMarker.Parent = workspace
             
             local bgui = Instance.new("BillboardGui", wpMarker)
-            bgui.Size = UD2_new(0, 100, 0, 30)
+            bgui.Size = UDim2.new(0, 100, 0, 30)
             bgui.AlwaysOnTop = true
             local txt = Instance.new("TextLabel", bgui)
-            txt.Size = UD2_new(1, 0, 1, 0)
+            txt.Size = UDim2.new(1, 0, 1, 0)
             txt.BackgroundTransparency = 1
             txt.Text = "WAYPOINT"
             txt.TextColor3 = GREEN
@@ -162,10 +151,7 @@ local function setWaypoint()
             txt.TextScaled = true
         end
         pcall(function() wpMarker.Position = savedWaypoint.Position end)
-        
         pcall(function() notify("Waypoint", "Position Saved & Visualized!", 2) end)
-    else
-        pcall(function() notify("Waypoint", "Error: Character body not found!", 2) end)
     end
 end
 
@@ -176,56 +162,37 @@ local function stopFly()
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
         local hum = char:FindFirstChild("Humanoid")
-        
-        if hrp and hrp:IsA("BasePart") then pcall(function() hrp.Anchored = false end) end
-        if hum and hum:IsA("Humanoid") then pcall(function() hum.PlatformStand = false end) end
+        if hrp then pcall(function() hrp.Anchored = false end) end
+        if hum then pcall(function() hum.PlatformStand = false end) end
     end
 end
 
 local function executeFly()
-    if not savedWaypoint then
-        pcall(function() notify("Waypoint", "Set a waypoint first!", 3) end)
-        return
-    end
-    
-    stopFly() 
-    
+    if not savedWaypoint then return end
+    stopFly()
     local char = LP.Character
     if not char then return end
-    
     local hrp = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
     local hum = char:FindFirstChild("Humanoid")
-    if not (hrp and hrp:IsA("BasePart")) then return end
+    if not hrp then return end
     
     local startCF = hrp.CFrame
     local targetCF = savedWaypoint
     local dist = (startCF.Position - targetCF.Position).Magnitude
-    local duration = math.max(0.1, dist / 500) 
+    local duration = math.max(0.1, dist / 500)
     local startTime = tick()
     
     isTweening = true
     pcall(function() hrp.Anchored = true end)
-    if hum and hum:IsA("Humanoid") then pcall(function() hum.PlatformStand = true end) end 
-    pcall(function() notify("Waypoint", "Flying to Waypoint (Noclip Active)...", 2) end)
+    if hum then pcall(function() hum.PlatformStand = true end) end
     
     flyLoop = RS.RenderStepped:Connect(function()
-        local elapsed = tick() - startTime
-        local alpha = math.clamp(elapsed / duration, 0, 1)
-        
-        if char then
-            for _, p in ipairs(char:GetChildren()) do
-                if p:IsA("BasePart") then pcall(function() p.CanCollide = false end) end
-            end
+        local alpha = math.clamp((tick() - startTime) / duration, 0, 1)
+        for _, p in ipairs(char:GetChildren()) do
+            if p:IsA("BasePart") then pcall(function() p.CanCollide = false end) end
         end
-        
-        if hrp and hrp:IsA("BasePart") then
-            pcall(function() hrp.CFrame = startCF:Lerp(targetCF, alpha) end)
-        end
-        
-        if alpha >= 1 then
-            stopFly()
-            pcall(function() notify("Waypoint", "Arrived!", 2) end)
-        end
+        pcall(function() hrp.CFrame = startCF:Lerp(targetCF, alpha) end)
+        if alpha >= 1 then stopFly() end
     end)
 end
 
@@ -262,16 +229,16 @@ local function tx(size, center, bold)
     local d = Drawing.new("Text")
     d.Size, d.Center, d.Outline, d.Visible = size, center, true, false
     d.Font = bold and 3 or 2
-    d.Color = C3_rgb(255, 255, 255)
+    d.Color = Color3.fromRGB(255, 255, 255)
     pool[#pool + 1] = d
     return d
 end
 
-local shadow = sq(C3_rgb(0, 0, 0), 0.5) 
+local shadow = sq(Color3.fromRGB(0, 0, 0), 0.5) 
 local rim = sq(RIM_COLOR, RIM_ALPHA) 
 local bg = sq(GLASS_BG, GLASS_ALPHA) 
 local head = sq(HEAD_OVERLAY, HEAD_ALPHA) 
-local accent = sq(C3_rgb(255, 255, 255), 1) 
+local accent = sq(Color3.fromRGB(255, 255, 255), 1) 
 
 local headTx = tx(16, false, true)
 local emptyTx = tx(14, false, false)
@@ -306,33 +273,19 @@ UI.AddTab(TAB, function(tab)
     o:Button("Unload", function() if _G.EggStop then _G.EggStop() end end)
 end)
 
--- Find Eggs Loop 
-local lastFindTick = 0
+-- Find Eggs Loop
 RS.Heartbeat:Connect(function()
     if not st.run then return end
-    if tick() - lastFindTick < 0.4 then return end
-    lastFindTick = tick()
-    
-    local nt, new, t0 = {}, {}, now()
+    local nt, t0 = {}, now()
     local f = WS:FindFirstChild("RenderedEggs")
     for _, e in ipairs(f and f:GetChildren() or {}) do
         local ok, t = pcall(readEgg, e)
         if ok and t and t.luck >= MIN then
             nt[#nt + 1] = t
-            local k = keyOf(t)
-            local prev = notified[k]
-            notified[k] = t0
-            if not first and (not prev or t0 - prev > 600) then new[#new + 1] = t end
         end
     end
     table.sort(nt, function(a, b) return a.luck > b.luck end)
-    targets, first = nt, false
-    if #new > 0 then
-        table.sort(new, function(a, b) return a.luck > b.luck end)
-        if new[1].luck >= NOTIFY_MIN then
-            alert(new[1])
-        end
-    end
+    targets = nt
 end)
 
 conn = RS.RenderStepped:Connect(function()
@@ -343,7 +296,6 @@ conn = RS.RenderStepped:Connect(function()
     was = down
     local show = st.panel
     local n = math.min(#list, ROWS)
-    
     local listHeight = 28 + math.max(n, 1) * RH
     local totalHeight = listHeight + 36 
 
@@ -354,33 +306,28 @@ conn = RS.RenderStepped:Connect(function()
         if down then px, py = mx - dx, my - dy else dragging = false end
     end
 
-    local tickTime = os.clock()
-    local rainbowColor = Color3.fromHSV(tickTime % 4 / 4, 1, 1)
-    local pastelRainbow = Color3.fromHSV(tickTime % 4 / 4, 0.4, 1)
-
     shadow.Visible, rim.Visible, bg.Visible, head.Visible, accent.Visible, headTx.Visible = show, show, show, show, show, show
+    shadow.Position = Vector2.new(px + 4, py + 4)
+    shadow.Size = Vector2.new(PW, totalHeight)
     
-    shadow.Position = V2_new(px + 4, py + 4)
-    shadow.Size = V2_new(PW, totalHeight)
+    rim.Position = Vector2.new(px - 1, py - 1)
+    rim.Size = Vector2.new(PW + 2, totalHeight + 2)
     
-    rim.Position = V2_new(px - 1, py - 1)
-    rim.Size = V2_new(PW + 2, totalHeight + 2)
+    bg.Position, bg.Size = Vector2.new(px, py), Vector2.new(PW, totalHeight)
     
-    bg.Position, bg.Size = V2_new(px, py), V2_new(PW, totalHeight)
+    accent.Position, accent.Size = Vector2.new(px, py), Vector2.new(PW, 2)
+    accent.Color = Color3.fromHSV(os.clock() % 4 / 4, 1, 1)
     
-    accent.Position, accent.Size = V2_new(px, py), V2_new(PW, 2)
-    accent.Color = rainbowColor
+    head.Position, head.Size = Vector2.new(px, py + 2), Vector2.new(PW, 26)
     
-    head.Position, head.Size = V2_new(px, py + 2), V2_new(PW, 26)
-    
-    headTx.Position = V2_new(px + 8, py + 7)
+    headTx.Position = Vector2.new(px + 8, py + 7)
     headTx.Text = "Made by R:6_cozy  |  Eggs: " .. #list
-    headTx.Color = pastelRainbow
+    headTx.Color = Color3.fromHSV(os.clock() % 4 / 4, 0.4, 1)
     
     emptyTx.Visible = show and #list == 0
-    emptyTx.Position = V2_new(px + 8, py + 34)
+    emptyTx.Position = Vector2.new(px + 8, py + 34)
     emptyTx.Text = "Waiting for eggs to spawn..."
-    emptyTx.Color = C3_rgb(150, 150, 150)
+    emptyTx.Color = Color3.fromRGB(150, 150, 150)
 
     for i = 1, ROWS do
         local r, t = rows[i], list[i]
@@ -393,18 +340,17 @@ conn = RS.RenderStepped:Connect(function()
             local hovTP = not dragging and mx >= tp_bx and mx <= tp_bx + bw and my >= ry + 2 and my <= ry + 2 + bh
             
             r.txt.Text = string.format("%s  -  %s", t.name, fmt(t.luck))
-            r.txt.Color = (t.model == sel) and GREEN or ((t.luck >= NOTIFY_MIN) and GOLD or C3_rgb(220, 220, 230))
-            r.txt.Position = V2_new(px + 8, ry + 4)
+            r.txt.Color = (t.model == sel) and GREEN or ((t.luck >= NOTIFY_MIN) and GOLD or Color3.fromRGB(220, 220, 230))
+            r.txt.Position = Vector2.new(px + 8, ry + 4)
             
             r.tpBtn.Color = BTN_COLOR
             r.tpBtn.Transparency = hovTP and BTN_HOVER_ALPHA or BTN_ALPHA
-            r.tpBtn.Position, r.tpBtn.Size = V2_new(tp_bx, ry + 2), V2_new(bw, bh)
+            r.tpBtn.Position, r.tpBtn.Size = Vector2.new(tp_bx, ry + 2), Vector2.new(bw, bh)
             r.tpTxt.Text = "TP"
-            r.tpTxt.Color = C3_rgb(255, 255, 255)
-            r.tpTxt.Position = V2_new(tp_bx + bw / 2, ry + 5)
+            r.tpTxt.Color = Color3.fromRGB(255, 255, 255)
+            r.tpTxt.Position = Vector2.new(tp_bx + bw / 2, ry + 5)
             
             r.txt.Visible, r.tpBtn.Visible, r.tpTxt.Visible = true, true, true
-            
             if clicked and hovTP then
                 tp(t)
             end
@@ -423,16 +369,16 @@ conn = RS.RenderStepped:Connect(function()
         local hov1 = not dragging and mx >= b1x and mx <= b1x + wbw and my >= by and my <= by + bh
         local hov2 = not dragging and mx >= b2x and mx <= b2x + wbw and my >= by and my <= by + bh
         
-        wpSetBtn.Position, wpSetBtn.Size = V2_new(b1x, by), V2_new(wbw, bh)
+        wpSetBtn.Position, wpSetBtn.Size = Vector2.new(b1x, by), Vector2.new(wbw, bh)
         wpSetBtn.Transparency = hov1 and BTN_HOVER_ALPHA or BTN_ALPHA
-        wpSetTxt.Position = V2_new(b1x + wbw/2, by + 4)
+        wpSetTxt.Position = Vector2.new(b1x + wbw/2, by + 4)
         
-        wpGoBtn.Position, wpGoBtn.Size = V2_new(b2x, by), V2_new(wbw, bh)
+        wpGoBtn.Position, wpGoBtn.Size = Vector2.new(b2x, by), Vector2.new(wbw, bh)
         wpGoBtn.Transparency = hov2 and BTN_HOVER_ALPHA or BTN_ALPHA
         
         wpGoTxt.Text = flyLoop and "Stop Fly" or "Tween WP"
-        wpGoTxt.Color = flyLoop and RED or (savedWaypoint and GREEN or C3_rgb(255, 255, 255))
-        wpGoTxt.Position = V2_new(b2x + wbw/2, by + 4)
+        wpGoTxt.Color = flyLoop and RED or (savedWaypoint and GREEN or Color3.fromRGB(255, 255, 255))
+        wpGoTxt.Position = Vector2.new(b2x + wbw/2, by + 4)
         
         if clicked then
             if hov1 then setWaypoint() end
@@ -446,42 +392,6 @@ conn = RS.RenderStepped:Connect(function()
             end
         end
     end
-
-    local c = 0
-    if st.lbl then
-        for _, t in ipairs(list) do
-            if c >= #labels then break end
-            local ok, pos = pcall(function() return t.root.Position end)
-            if ok and pos then
-                local targetPos = V3_new(pos.X, pos.Y + 2.8, pos.Z)
-                local sc, vis = nil, false
-                
-                local success = pcall(function()
-                    if type(WorldToScreen) == "function" then
-                        sc, vis = WorldToScreen(targetPos)
-                    else
-                        sc, vis = workspace.CurrentCamera:WorldToViewportPoint(targetPos)
-                    end
-                end)
-                
-                if success and sc then
-                    if typeof(sc) == "Vector3" then 
-                        vis = sc.Z > 0 
-                        sc = V2_new(sc.X, sc.Y) 
-                    end 
-                    
-                    if vis then
-                        c = c + 1
-                        labels[c].Text = t.name .. " | " .. fmt(t.luck)
-                        labels[c].Color = (t.luck >= NOTIFY_MIN) and GOLD or C3_rgb(255, 255, 255)
-                        labels[c].Position = sc
-                        labels[c].Visible = true
-                    end
-                end
-            end
-        end
-    end
-    for i = c + 1, #labels do labels[i].Visible = false end
 end)
 
 _G.EggStop = function()
@@ -497,4 +407,4 @@ _G.EggStop = function()
     notify("Egg Overlay", "Unloaded", 3)
 end
 
-notify("R:6_cozy", "Auto feature removed successfully!", 5)
+notify("R:6_cozy", "Egg TP Fixed & Loaded!", 5)
